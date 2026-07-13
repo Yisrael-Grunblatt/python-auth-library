@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Profile</title>
+</head>
+<body>
+    <h1>Your profile</h1>
+    <dl>
+        <dt>Username</dt><dd>{{ user.username }}</dd>
+        <dt>Name</dt><dd>{{ user.name }}</dd>
+        <dt>Email</dt><dd>{{ user.email }} ({{ "verified" if user.email_verified else "unverified" }})</dd>
+        <dt>User id</dt><dd>{{ user.sub }}</dd>
+        <dt>Roles</dt><dd>{{ user.roles | join(", ") or "(none)" }}</dd>
+    </dl>
+    <p><a href="{{ url_for('index') }}">Home</a> ·
+       <a href="{{ url_for('keycloak_auth.logout') }}">Log out</a></p>
+</body>
+</html>

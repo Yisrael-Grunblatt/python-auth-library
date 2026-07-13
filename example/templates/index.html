@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>keycloak-flask-auth example</title>
+</head>
+<body>
+    <h1>Home (public)</h1>
+
+    {% if is_authenticated %}
+        <p>Signed in as <strong>{{ current_user.username }}</strong>
+           ({{ current_user.email }})</p>
+        <ul>
+            <li><a href="{{ url_for('profile') }}">My profile</a></li>
+            <li><a href="{{ url_for('admin') }}">Admin area</a></li>
+            <li><a href="{{ url_for('keycloak_auth.logout') }}">Log out</a></li>
+        </ul>
+    {% else %}
+        <p>You are not signed in.</p>
+        <a href="{{ url_for('keycloak_auth.login') }}">Log in with Keycloak</a>
+    {% endif %}
+</body>
+</html>
