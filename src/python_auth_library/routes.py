@@ -1,10 +1,37 @@
 from __future__ import annotations
 
+import base64
+import binascii
+import json
+from typing import Any
 from urllib.parse import urlencode
 
 from flask import Blueprint, redirect, request, session, url_for
 
 SESSION_NEXT_KEY = "_kfa_next"
+
+_ROLE_CLAIMS = ("realm_access", "resource_access")
+
+
+def _decode_jwt_payload(token: str) -> dict[str, Any]:
+
+    try:
+        payload_segment = token.split(".")[1]
+        padding = "=" * (-len(payload_segment) % 4)
+        decoded = base64.urlsafe_b64decode(payload_segment + padding)
+        return json.loads(decoded)
+    except (IndexError, ValueError, binascii.Error):
+        return {}
+
+
+def _merge_role_claims(claims: dict[str, Any], access_token: str | None) -> dict[str, Any]:
+    if not access_token:
+        return claims
+    access_claims = _decode_jwt_payload(access_token)
+    for key in _ROLE_CLAIMS:
+        if key not in claims and key in access_claims:
+            claims[key] = access_claims[key]
+    return claims
 
 
 def build_blueprint(auth) -> Blueprint:
@@ -25,7 +52,8 @@ def build_blueprint(auth) -> Blueprint:
         if claims is None:
             claims = auth.client.userinfo(token=token)
 
-        auth.save_user(dict(claims), token.get("id_token"))
+        claims = _merge_role_claims(dict(claims), token.get("access_token"))
+        auth.save_user(claims, token.get("id_token"))
 
         next_url = session.pop(SESSION_NEXT_KEY, None) or auth.post_login_redirect
         return redirect(next_url)
