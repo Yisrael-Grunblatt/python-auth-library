@@ -1,4 +1,4 @@
-# keycloak-flask-auth
+# python-auth-library
 
 Drop-in **Keycloak (OIDC) authentication for Flask** apps that render HTML
 templates server-side. Built on [Authlib](https://authlib.org/). Designed so any
@@ -16,7 +16,7 @@ Python developer can add SSO to a Flask project in **three lines**.
 ## Install
 
 ```bash
-pip install keycloak-flask-auth
+pip install python-auth-library
 # from source:
 pip install -e .
 ```
@@ -25,7 +25,7 @@ pip install -e .
 
 ```python
 from flask import Flask, g, render_template
-from keycloak_flask_auth import KeycloakAuth, login_required
+from python_auth_library import KeycloakAuth, login_required
 
 app = Flask(__name__)
 app.secret_key = "change-me"          # signs the session cookie
@@ -60,7 +60,7 @@ That's it. The library adds these routes automatically:
 ## Protecting routes
 
 ```python
-from keycloak_flask_auth import login_required, roles_required
+from python_auth_library import login_required, roles_required
 
 @app.route("/dashboard")
 @login_required

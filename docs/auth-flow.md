@@ -1,7 +1,7 @@
 # How Authentication Works
 
 This document explains what actually happens when a user logs into an app that
-uses `keycloak-flask-auth`. It uses the **OpenID Connect (OIDC) Authorization
+uses `python-auth-library`. It uses the **OpenID Connect (OIDC) Authorization
 Code Flow**, with Keycloak acting as the Identity Provider (IdP) and your Flask
 app as the client.
 
@@ -28,13 +28,13 @@ Three routes are registered automatically under `url_prefix` (default `/auth`):
 - `GET /auth/callback` — Keycloak redirects back here with a code
 - `GET /auth/logout` — clears the session and logs out of Keycloak
 
-These live in [src/keycloak_flask_auth/routes.py](../src/keycloak_flask_auth/routes.py).
+These live in [src/python_auth_library/routes.py](../src/python_auth_library/routes.py).
 
 ---
 
 ## One-time setup (`init_app`)
 
-When you call `KeycloakAuth(app)`, [`init_app`](../src/keycloak_flask_auth/auth.py#L74) does the wiring:
+When you call `KeycloakAuth(app)`, [`init_app`](../src/python_auth_library/auth.py#L74) does the wiring:
 
 1. **Resolves config** from constructor args or environment variables
    (`KEYCLOAK_SERVER_URL`, `KEYCLOAK_REALM`, `KEYCLOAK_CLIENT_ID`,
@@ -85,14 +85,14 @@ sequenceDiagram
 
 ### 1. A user hits a protected route
 
-Routes decorated with [`@login_required`](../src/keycloak_flask_auth/decorators.py#L10)
-or [`@roles_required(...)`](../src/keycloak_flask_auth/decorators.py#L33) check
+Routes decorated with [`@login_required`](../src/python_auth_library/decorators.py#L10)
+or [`@roles_required(...)`](../src/python_auth_library/decorators.py#L33) check
 `g.user`. If it's `None`, the decorator redirects to `/auth/login`, passing the
 original URL as `?next=...` so the user can be returned there afterwards.
 
 ### 2. `/auth/login` kicks off OIDC
 
-The [`login`](../src/keycloak_flask_auth/routes.py#L20) view:
+The [`login`](../src/python_auth_library/routes.py#L20) view:
 
 - Saves the `next` URL in the session (`_kfa_next`).
 - Calls `auth.client.authorize_redirect(redirect_uri)`, which sends the browser
@@ -108,7 +108,7 @@ Keycloak redirects the browser back to `/auth/callback` with a short-lived
 
 ### 4. `/auth/callback` exchanges the code for tokens
 
-The [`callback`](../src/keycloak_flask_auth/routes.py#L27) view:
+The [`callback`](../src/python_auth_library/routes.py#L27) view:
 
 - Calls `auth.client.authorize_access_token()`. This is a **back-channel**
   (server-to-server) request: Authlib sends the code + client secret to
@@ -117,14 +117,14 @@ The [`callback`](../src/keycloak_flask_auth/routes.py#L27) view:
   `state`.
 - Pulls the user **claims** out of `token["userinfo"]` (falling back to the
   UserInfo endpoint if needed).
-- Calls [`auth.save_user(claims, id_token)`](../src/keycloak_flask_auth/auth.py#L142),
+- Calls [`auth.save_user(claims, id_token)`](../src/python_auth_library/auth.py#L142),
   which builds a `User` and stores the claims in the session (`_kfa_user`), plus
   the raw `id_token` (`_kfa_id_token`) for logout.
 - Redirects the browser to the saved `next` URL.
 
 ### 5. Subsequent requests
 
-On every request, [`_load_user`](../src/keycloak_flask_auth/auth.py#L135) runs
+On every request, [`_load_user`](../src/python_auth_library/auth.py#L135) runs
 before the view and rebuilds `g.user` from the session claims. No network call
 to Keycloak is needed — the session cookie is the source of truth until logout
 or session expiry.
@@ -133,7 +133,7 @@ or session expiry.
 
 ## What is a `User`?
 
-[`User`](../src/keycloak_flask_auth/user.py#L8) is a thin wrapper over the OIDC
+[`User`](../src/python_auth_library/user.py#L8) is a thin wrapper over the OIDC
 claims dict. It exposes convenient fields and role helpers:
 
 - Profile: `user.sub`, `user.username`, `user.email`, `user.name`, …
@@ -150,7 +150,7 @@ The raw claims are always available via `user.claims`.
 
 ## Role-based access
 
-[`@roles_required("admin")`](../src/keycloak_flask_auth/decorators.py#L33)
+[`@roles_required("admin")`](../src/python_auth_library/decorators.py#L33)
 first ensures the user is logged in (redirecting to login if not), then checks
 roles:
 
@@ -178,10 +178,10 @@ sequenceDiagram
     K-->>B: 302 redirect back to post_logout URL
 ```
 
-The [`logout`](../src/keycloak_flask_auth/routes.py#L41) view:
+The [`logout`](../src/python_auth_library/routes.py#L41) view:
 
 1. Clears the local Flask session via
-   [`clear_session`](../src/keycloak_flask_auth/auth.py#L149) and retrieves the
+   [`clear_session`](../src/python_auth_library/auth.py#L149) and retrieves the
    stored `id_token`.
 2. Looks up Keycloak's `end_session_endpoint` from the discovery document.
 3. Redirects the browser there with `id_token_hint`, `client_id`, and

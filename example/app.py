@@ -12,7 +12,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, g, render_template
 
-from keycloak_flask_auth import KeycloakAuth, login_required, roles_required
+from python_auth_library import KeycloakAuth, login_required, roles_required
 
 load_dotenv()
 

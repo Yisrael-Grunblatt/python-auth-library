@@ -76,7 +76,7 @@ class KeycloakAuth:
         app.register_blueprint(build_blueprint(self), url_prefix=self.url_prefix)
 
         app.extensions = getattr(app, "extensions", {})
-        app.extensions["keycloak_flask_auth"] = self
+        app.extensions["python_auth_library"] = self
 
     def _resolve_config(self) -> dict[str, Any]:
         def pick(key: str, env: str, default: Any = None, required: bool = False) -> Any:
@@ -85,7 +85,7 @@ class KeycloakAuth:
                 value = os.environ.get(env, default)
             if required and not value:
                 raise RuntimeError(
-                    f"keycloak-flask-auth: missing required config '{key}'. "
+                    f"python-auth-library: missing required config '{key}'. "
                     f"Set the {env} environment variable or pass {key}=... to KeycloakAuth()."
                 )
             return value
