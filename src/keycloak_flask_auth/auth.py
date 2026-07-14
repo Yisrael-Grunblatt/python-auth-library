@@ -1,5 +1,3 @@
-"""Core Keycloak/OIDC integration for Flask, built on Authlib."""
-
 from __future__ import annotations
 
 import os
@@ -11,34 +9,11 @@ from flask import Flask, g, session
 from .routes import build_blueprint
 from .user import User
 
-# Session keys (kept private to avoid collisions with app data)
 SESSION_USER_KEY = "_kfa_user"
 SESSION_ID_TOKEN_KEY = "_kfa_id_token"
 
 
 class KeycloakAuth:
-    """Wires Keycloak OIDC login into a Flask app.
-
-    All configuration is read from environment variables by default, so the
-    integrating developer usually only needs::
-
-        auth = KeycloakAuth(app)
-
-    Required environment variables
-    ------------------------------
-    KEYCLOAK_SERVER_URL   e.g. https://auth.example.com
-    KEYCLOAK_REALM        e.g. my-realm
-    KEYCLOAK_CLIENT_ID    e.g. my-flask-app
-    KEYCLOAK_CLIENT_SECRET the confidential client's secret
-
-    Optional
-    --------
-    KEYCLOAK_SCOPES         default "openid email profile"
-    KEYCLOAK_URL_PREFIX     default "/auth" (mounts /login, /callback, /logout)
-    KEYCLOAK_POST_LOGIN     path to redirect to after login (default "/")
-    KEYCLOAK_POST_LOGOUT    absolute URL Keycloak returns to after logout
-    """
-
     def __init__(
         self,
         app: Flask | None = None,
@@ -63,7 +38,7 @@ class KeycloakAuth:
             "post_logout_redirect": post_logout_redirect,
         }
         self.oauth: OAuth | None = None
-        self.client = None  # Authlib remote app
+        self.client = None
         self.client_id: str | None = None
         self.server_metadata_url: str | None = None
         self.end_session_endpoint: str | None = None
@@ -74,7 +49,6 @@ class KeycloakAuth:
         if app is not None:
             self.init_app(app)
 
-    # -- Setup ------------------------------------------------------------------
     def init_app(self, app: Flask) -> None:
         cfg = self._resolve_config()
 
@@ -95,16 +69,12 @@ class KeycloakAuth:
         )
         self.oauth = oauth
 
-        # Make the current user available as ``g.user`` on every request.
         app.before_request(self._load_user)
 
-        # Expose helpers to Jinja templates: current_user, is_authenticated.
         app.context_processor(self._template_context)
 
-        # Register /login, /callback, /logout.
         app.register_blueprint(build_blueprint(self), url_prefix=self.url_prefix)
 
-        # Keep a handle for extensions / debugging.
         app.extensions = getattr(app, "extensions", {})
         app.extensions["keycloak_flask_auth"] = self
 
@@ -131,7 +101,6 @@ class KeycloakAuth:
             "post_logout_redirect": pick("post_logout_redirect", "KEYCLOAK_POST_LOGOUT", None),
         }
 
-    # -- Request lifecycle ------------------------------------------------------
     def _load_user(self) -> None:
         g.user = User.from_session(session.get(SESSION_USER_KEY), client_id=self.client_id)
 
@@ -139,7 +108,6 @@ class KeycloakAuth:
         user = getattr(g, "user", None)
         return {"current_user": user, "is_authenticated": user is not None}
 
-    # -- Session helpers (used by routes) --------------------------------------
     def save_user(self, claims: dict[str, Any], id_token: str | None) -> User:
         user = User(claims, client_id=self.client_id)
         session[SESSION_USER_KEY] = user.to_session()
@@ -154,9 +122,7 @@ class KeycloakAuth:
         g.user = None
         return id_token
 
-    # -- Discovery helpers ------------------------------------------------------
     def load_server_metadata(self) -> dict[str, Any]:
-        """Fetch (and cache on the Authlib client) the OIDC discovery document."""
         return self.client.load_server_metadata()
 
     @property

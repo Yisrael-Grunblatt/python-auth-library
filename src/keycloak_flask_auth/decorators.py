@@ -1,5 +1,3 @@
-"""Route protection decorators."""
-
 from __future__ import annotations
 
 import functools
@@ -9,17 +7,6 @@ from flask import abort, g, redirect, request, url_for
 
 
 def login_required(view: Callable) -> Callable:
-    """Require an authenticated user.
-
-    Unauthenticated requests are redirected to the Keycloak login flow and, on
-    success, returned to the originally requested URL.
-
-        @app.route("/dashboard")
-        @login_required
-        def dashboard():
-            return render_template("dashboard.html", user=g.user)
-    """
-
     @functools.wraps(view)
     def wrapper(*args, **kwargs):
         if getattr(g, "user", None) is None:
@@ -31,23 +18,6 @@ def login_required(view: Callable) -> Callable:
 
 
 def roles_required(*roles: str, require_all: bool = True) -> Callable:
-    """Require the authenticated user to have the given Keycloak role(s).
-
-    By default the user must have *all* listed roles. Pass ``require_all=False``
-    to allow access when the user has *any* of them. Missing authentication
-    triggers a login redirect; insufficient roles returns HTTP 403.
-
-        @app.route("/admin")
-        @roles_required("admin")
-        def admin():
-            ...
-
-        @app.route("/reports")
-        @roles_required("analyst", "manager", require_all=False)
-        def reports():
-            ...
-    """
-
     def decorator(view: Callable) -> Callable:
         @functools.wraps(view)
         def wrapper(*args, **kwargs):
